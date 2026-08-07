@@ -1,9 +1,7 @@
-name: AWS OIDC Debug
+name: OIDC Debug
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -22,15 +20,10 @@ jobs:
           echo "Ref: ${{ github.ref }}"
           echo "Actor: ${{ github.actor }}"
 
-      - name: Dump OIDC Claims
-        run: |
-          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-
-          echo "$TOKEN" | cut -d '.' -f2 | base64 -d || true
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Request OIDC Token
+        uses: actions/github-script@v7
         with:
-          role-to-assume: arn:aws:iam::900360460803:role/github-actions-oidc-role
-          aws-region: us-east-1
+          script: |
+            const core = require('@actions/core');
+            const token = await core.getIDToken('sts.amazonaws.com');
+            console.log(token);
