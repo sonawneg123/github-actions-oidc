@@ -1,10 +1,6 @@
-name: AWS OIDC Demo
+name: OIDC Token Debug
 
 on:
-  push:
-    branches:
-      - main
-
   workflow_dispatch:
 
 permissions:
@@ -12,27 +8,14 @@ permissions:
   contents: read
 
 jobs:
-  test-oidc:
+  debug:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Display GitHub Context
-        run: |
-          echo "Repository : ${{ github.repository }}"
-          echo "Branch     : ${{ github.ref }}"
-          echo "Actor      : ${{ github.actor }}"
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Debug OIDC Token
+        uses: github/actions-oidc-debugger@v1
         with:
-          role-to-assume: arn:aws:iam::900360460803:role/github-actions-role-v2
-          aws-region: us-east-1
-
-      - name: Verify AWS Identity
-        run: aws sts get-caller-identity
-
-      - name: List S3 Buckets
-        run: aws s3 ls
+          audience: sts.amazonaws.com
