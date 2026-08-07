@@ -1,4 +1,4 @@
-name: Test STS Directly
+name: AWS OIDC S3 Demo
 
 on:
   workflow_dispatch:
@@ -8,23 +8,42 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  s3-demo:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Get OIDC Token
-        id: token
+      - name: Configure AWS Credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::900360460803:role/github-actions-oidc-role
+          aws-region: us-east-1
+
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
+      - name: Create Test File
         run: |
-          TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "Hello from GitHub Actions using OIDC!" > hello.txt
 
-          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
-
-      - name: Call STS directly
+      - name: Create S3 Bucket (if not exists)
         run: |
-          aws sts assume-role-with-web-identity \
-            --role-arn arn:aws:iam::900360460803:role/github-actions-oidc-role \
-            --role-session-name github-actions \
-            --web-identity-token "$TOKEN"
+          BUCKET_NAME=07aug07
+
+          if aws s3api head-bucket --bucket $BUCKET_NAME 2>/dev/null; then
+            echo "Bucket already exists."
+          else
+            aws s3api create-bucket \
+              --bucket $BUCKET_NAME \
+              --region us-east-1
+          fi
+
+      - name: Upload File to S3
+        run: |
+          aws s3 cp hello.txt s3://07aug07
+
+      - name: List Bucket Contents
+        run: |
+          aws s3 ls s3://07aug07
